@@ -3,6 +3,7 @@ import tweepy
 import random
 app = Flask(__name__)
 # Keys/Tokens for twitter bot
+# Please dont steal them
 consumer_key = "QVmwNTrTO2mlys63Z2bzdErT6"
 consumer_secret = "koO1uBGthtbKDt02W4JLTPRbQwrvbn0tSywt3C17FaxSeDdps1"
 access_token = "1524861877196668942-n9t3jyblMmPjiRujsk6hDa0ET7dmod"
